@@ -19,18 +19,28 @@ export default function ProfileScreen() {
   const { habits } = useHabits(user?.id);
   const { profile, getDisplayName, getInitials } = useProfile(user?.id);
 
-  const handleSignOut = async () => {
-    Alert.alert('Déconnexion', 'Voulez-vous vraiment vous déconnecter ?', [
-      { text: 'Annuler', style: 'cancel' },
-      {
-        text: 'Déconnecter',
-        style: 'destructive',
-        onPress: async () => {
-          await cancelAllNotifications();
-          await signOut();
+  const handleSignOut = () => {
+    Alert.alert(
+      'Déconnexion',
+      'Êtes-vous sûr de vouloir vous déconnecter ?',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Déconnecter',
+          style: 'destructive',
+          onPress: () => {
+            (async () => {
+              try {
+                await cancelAllNotifications();
+                await signOut();
+              } catch (error) {
+                console.error('Error during sign out:', error);
+              }
+            })();
+          },
         },
-      },
-    ]);
+      ]
+    );
   };
 
   const handleClearCache = async () => {
