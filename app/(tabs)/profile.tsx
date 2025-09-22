@@ -7,7 +7,7 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
-import { LogOut, Trash2, Bell, Settings, CreditCard as Edit } from 'lucide-react-native'
+import { LogOut, Trash2 } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { useHabits } from '@/hooks/useHabits';
 import { useProfile } from '@/hooks/useProfile';
@@ -19,7 +19,7 @@ export default function ProfileScreen() {
   const { habits } = useHabits(user?.id);
   const { profile, getDisplayName, getInitials } = useProfile(user?.id);
 
-  const handleSignOut = async () => {
+  const handleSignOut = () => {
     Alert.alert(
       'Déconnexion',
       'Êtes-vous sûr de vouloir vous déconnecter ?',
@@ -28,9 +28,15 @@ export default function ProfileScreen() {
         {
           text: 'Déconnecter',
           style: 'destructive',
-          onPress: async () => {
-            await cancelAllNotifications();
-            await signOut();
+          onPress: () => {
+            (async () => {
+              try {
+                await cancelAllNotifications();
+                await signOut();
+              } catch (error) {
+                console.error('Error during sign out:', error);
+              }
+            })();
           },
         },
       ]
@@ -40,7 +46,7 @@ export default function ProfileScreen() {
   const handleClearCache = async () => {
     Alert.alert(
       'Vider le cache',
-      'Cette action supprimera les données mises en cache localement. Les données sur le serveur seront préservées.',
+      'Supprime les données mises en cache localement.',
       [
         { text: 'Annuler', style: 'cancel' },
         {
@@ -55,105 +61,65 @@ export default function ProfileScreen() {
     );
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('fr-FR', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
-  };
-
-  const getMemberSince = () => {
-    if (!profile?.created_at) return 'Inconnu';
-    return formatDate(profile.created_at);
-  };
+  const memberSince = profile?.created_at
+    ? new Date(profile.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+    : 'Inconnu';
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Profil</Text>
-        <Text style={styles.subtitle}>
-          Gérez votre compte et vos préférences
-        </Text>
+        <Text style={styles.subtitle}>Gérez votre compte et vos préférences</Text>
       </View>
 
       <View style={styles.content}>
-        {/* Informations utilisateur */}
+        {/* User Info */}
         <View style={styles.section}>
           <View style={styles.userCard}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {getInitials()}
-              </Text>
+              <Text style={styles.avatarText}>{getInitials()}</Text>
             </View>
             <View style={styles.userInfo}>
               <Text style={styles.userName}>{getDisplayName()}</Text>
               <Text style={styles.userEmail}>{profile?.email}</Text>
-              <Text style={styles.memberSince}>
-                Membre depuis le {getMemberSince()}
-              </Text>
+              <Text style={styles.memberSince}>Membre depuis {memberSince}</Text>
             </View>
           </View>
         </View>
 
-        {/* Statistiques */}
+        {/* Stats */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Mes statistiques</Text>
           <View style={styles.statsCard}>
-            <View style={styles.statRow}>
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{habits.length}</Text>
-                <Text style={styles.statLabel}>
-                  Habitude{habits.length > 1 ? 's' : ''} créée{habits.length > 1 ? 's' : ''}
-                </Text>
-              </View>
-            </View>
+            <Text style={styles.statNumber}>{habits.length}</Text>
+            <Text style={styles.statLabel}>
+              Habitude{habits.length > 1 ? 's' : ''} créée{habits.length > 1 ? 's' : ''}
+            </Text>
           </View>
         </View>
 
         {/* Actions */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Actions</Text>
-          
           <TouchableOpacity style={styles.actionButton} onPress={handleClearCache}>
-            <View style={styles.actionButtonContent}>
-              <Trash2 size={20} color="#6b7280" strokeWidth={2} />
-              <View style={styles.actionButtonText}>
-                <Text style={styles.actionButtonTitle}>Vider le cache</Text>
-                <Text style={styles.actionButtonSubtitle}>
-                  Supprime les données mises en cache localement
-                </Text>
-              </View>
-            </View>
+            <Trash2 size={20} color="#6b7280" />
+            <Text style={styles.actionButtonTitle}>Vider le cache</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={[styles.actionButton, styles.signOutButton]} 
-            onPress={handleSignOut}
-          >
-            <View style={styles.actionButtonContent}>
-              <LogOut size={20} color="#ef4444" strokeWidth={2} />
-              <View style={styles.actionButtonText}>
-                <Text style={[styles.actionButtonTitle, styles.signOutText]}>
-                  Se déconnecter
-                </Text>
-                <Text style={styles.actionButtonSubtitle}>
-                  Vous devrez vous reconnecter
-                </Text>
-              </View>
-            </View>
+          <TouchableOpacity style={[styles.actionButton, styles.signOutButton]} onPress={handleSignOut}>
+            <LogOut size={20} color="#ef4444" />
+            <Text style={[styles.actionButtonTitle, styles.signOutText]}>Se déconnecter</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Informations */}
+        {/* App Info */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Informations</Text>
           <View style={styles.infoCard}>
             <Text style={styles.appName}>Habit Tracker</Text>
             <Text style={styles.version}>Version 1.0.0</Text>
             <Text style={styles.description}>
-              Une application simple et efficace pour suivre vos habitudes quotidiennes 
-              et améliorer votre bien-être.
+              Une application simple pour suivre vos habitudes quotidiennes.
             </Text>
           </View>
         </View>

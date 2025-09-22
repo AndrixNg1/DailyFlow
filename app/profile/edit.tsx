@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   TextInput,
   TouchableOpacity,
   ScrollView,
   Alert,
+  StyleSheet,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
@@ -16,18 +16,18 @@ import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 
 const TIMEZONES = [
-  { label: 'Paris (Europe/Paris)', value: 'Europe/Paris' },
-  { label: 'Londres (Europe/London)', value: 'Europe/London' },
-  { label: 'New York (America/New_York)', value: 'America/New_York' },
-  { label: 'Los Angeles (America/Los_Angeles)', value: 'America/Los_Angeles' },
-  { label: 'Tokyo (Asia/Tokyo)', value: 'Asia/Tokyo' },
-  { label: 'Sydney (Australia/Sydney)', value: 'Australia/Sydney' },
+  { label: 'Paris', value: 'Europe/Paris' },
+  { label: 'Londres', value: 'Europe/London' },
+  { label: 'New York', value: 'America/New_York' },
+  { label: 'Los Angeles', value: 'America/Los_Angeles' },
+  { label: 'Tokyo', value: 'Asia/Tokyo' },
+  { label: 'Sydney', value: 'Australia/Sydney' },
 ];
 
 export default function EditProfileScreen() {
   const { user } = useAuth();
   const { profile, updateProfile, loading } = useProfile(user?.id);
-  
+
   const [fullName, setFullName] = useState('');
   const [timezone, setTimezone] = useState('Europe/Paris');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -41,40 +41,18 @@ export default function EditProfileScreen() {
 
   const handleSave = async () => {
     if (!user?.id) return;
-
     setIsSubmitting(true);
-
-    const { error } = await updateProfile({
-      full_name: fullName.trim() || null,
-      timezone,
-    });
-
+    const { error } = await updateProfile({ full_name: fullName.trim() || null, timezone });
     setIsSubmitting(false);
 
     if (error) {
       Alert.alert('Erreur', 'Impossible de mettre à jour le profil');
-      console.error('Error updating profile:', error);
     } else {
-      Alert.alert(
-        'Succès',
-        'Profil mis à jour avec succès !',
-        [
-          {
-            text: 'OK',
-            onPress: () => router.back(),
-          },
-        ]
-      );
+      Alert.alert('Succès', 'Profil mis à jour', [{ text: 'OK', onPress: () => router.back() }]);
     }
   };
 
-  if (loading) {
-    return (
-      <View style={[styles.container, styles.centerContent]}>
-        <Text style={styles.loadingText}>Chargement...</Text>
-      </View>
-    );
-  }
+  if (loading) return <View style={styles.center}><Text>Chargement...</Text></View>;
 
   return (
     <>
@@ -82,82 +60,33 @@ export default function EditProfileScreen() {
         options={{
           headerShown: true,
           title: 'Modifier le profil',
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()}>
-              <ArrowLeft size={24} color="#1f2937" />
-            </TouchableOpacity>
-          ),
+          headerLeft: () => <TouchableOpacity onPress={() => router.back()}><ArrowLeft size={24} /></TouchableOpacity>,
           headerRight: () => (
-            <TouchableOpacity 
-              onPress={handleSave}
-              disabled={isSubmitting}
-              style={[styles.saveButton, isSubmitting && styles.saveButtonDisabled]}
-            >
+            <TouchableOpacity onPress={handleSave} disabled={isSubmitting}>
               <Save size={20} color={isSubmitting ? '#9ca3af' : '#3b82f6'} />
             </TouchableOpacity>
           ),
         }}
       />
-      
-      <KeyboardAvoidingView 
-        style={styles.container} 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
+
+      <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView style={styles.content}>
           <View style={styles.form}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Nom complet</Text>
-              <TextInput
-                style={styles.textInput}
-                value={fullName}
-                onChangeText={setFullName}
-                placeholder="Votre nom complet (optionnel)"
-                placeholderTextColor="#9ca3af"
-                maxLength={100}
-              />
-              <Text style={styles.helpText}>
-                Ce nom sera affiché dans votre profil
-              </Text>
-            </View>
+            <Text style={styles.label}>Nom complet</Text>
+            <TextInput style={styles.input} value={fullName} onChangeText={setFullName} placeholder="Nom complet" />
+            <Text style={styles.help}>Affiché dans votre profil</Text>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email</Text>
-              <TextInput
-                style={[styles.textInput, styles.disabledInput]}
-                value={profile?.email || ''}
-                editable={false}
-                placeholderTextColor="#9ca3af"
-              />
-              <Text style={styles.helpText}>
-                L'email ne peut pas être modifié
-              </Text>
-            </View>
+            <Text style={styles.label}>Fuseau horaire</Text>
+            {TIMEZONES.map((tz) => (
+              <TouchableOpacity key={tz.value} onPress={() => setTimezone(tz.value)} style={[styles.timezoneOption, timezone === tz.value && styles.selected]}>
+                <Text style={[styles.timezoneText, timezone === tz.value && styles.selectedText]}>{tz.label}</Text>
+              </TouchableOpacity>
+            ))}
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Fuseau horaire</Text>
-              <View style={styles.timezoneContainer}>
-                {TIMEZONES.map((tz) => (
-                  <TouchableOpacity
-                    key={tz.value}
-                    style={[
-                      styles.timezoneOption,
-                      timezone === tz.value && styles.timezoneOptionSelected
-                    ]}
-                    onPress={() => setTimezone(tz.value)}
-                  >
-                    <Text style={[
-                      styles.timezoneText,
-                      timezone === tz.value && styles.timezoneTextSelected
-                    ]}>
-                      {tz.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <Text style={styles.helpText}>
-                Utilisé pour programmer les notifications au bon moment
-              </Text>
-            </View>
+            <Text style={styles.help}>Utilisé pour programmer les notifications</Text>
+
+            <Text style={styles.label}>Email</Text>
+            <TextInput style={[styles.input, styles.disabled]} value={profile?.email || ''} editable={false} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -166,77 +95,62 @@ export default function EditProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
+  container: { 
+    flex: 1, 
+    backgroundColor: '#f8fafc' 
   },
-  centerContent: {
-    justifyContent: 'center',
-    alignItems: 'center',
+  center: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
   },
-  content: {
-    flex: 1,
+  content: { 
+    padding: 24 
   },
-  form: {
-    padding: 24,
-    gap: 24,
+  form: { 
+    gap: 16 
   },
-  inputGroup: {
-    gap: 8,
+  label: { 
+    fontSize: 16, 
+    fontWeight: '600', 
+    color: '#1f2937', 
+    marginBottom: 4 
   },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1f2937',
+  input: { 
+    borderWidth: 1, 
+    borderColor: '#d1d5db', 
+    borderRadius: 12, 
+    padding: 12, 
+    backgroundColor: '#fff', 
+    color: '#1f2937' 
   },
-  textInput: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    backgroundColor: '#ffffff',
-    color: '#1f2937',
+  disabled: { 
+    backgroundColor: '#f3f4f6', 
+    color: '#6b7280' 
   },
-  disabledInput: {
-    backgroundColor: '#f3f4f6',
-    color: '#6b7280',
+  help: { 
+    fontSize: 12, 
+    color: '#6b7280', 
+    fontStyle: 'italic', 
+    marginBottom: 8 
   },
-  helpText: {
-    fontSize: 14,
-    color: '#6b7280',
-    fontStyle: 'italic',
+  timezoneOption: { 
+    padding: 12, 
+    borderWidth: 1, 
+    borderColor: '#d1d5db', 
+    borderRadius: 12, 
+    marginBottom: 4, 
+    backgroundColor: '#fff' 
   },
-  timezoneContainer: {
-    gap: 8,
+  selected: { 
+    borderColor: '#3b82f6', 
+    backgroundColor: '#eff6ff' 
   },
-  timezoneOption: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 12,
-    padding: 16,
-    backgroundColor: '#ffffff',
+  timezoneText: { 
+    color: '#1f2937' 
   },
-  timezoneOptionSelected: {
-    borderColor: '#3b82f6',
-    backgroundColor: '#eff6ff',
-  },
-  timezoneText: {
-    fontSize: 16,
-    color: '#1f2937',
-  },
-  timezoneTextSelected: {
-    color: '#3b82f6',
-    fontWeight: '500',
-  },
-  loadingText: {
-    fontSize: 16,
-    color: '#6b7280',
-  },
-  saveButton: {
-    padding: 8,
-  },
-  saveButtonDisabled: {
-    opacity: 0.5,
+  selectedText: { 
+    color: '#3b82f6', 
+    fontWeight: '500' 
   },
 });

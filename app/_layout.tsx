@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
@@ -9,25 +8,24 @@ export default function RootLayout() {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return null; // On pourrait afficher un splash screen ici
+    return null; // Ici, tu peux mettre un SplashScreen ou Loader
   }
 
   return (
-    <>
-      <Stack screenOptions={{ headerShown: false }}>
-        {user ? (
-          <>
-            <Stack.Screen name="(tabs)" />
-          </>
-        ) : (
-          <>
-            <Stack.Screen name="auth/login" />
-            <Stack.Screen name="auth/register" />
-          </>
-        )}
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
-    </>
+    <Stack
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      {user ? (
+        <Stack.Screen name="(tabs)" />
+      ) : (
+        <>
+          <Stack.Screen name="auth/login" />
+          <Stack.Screen name="auth/register" />
+        </>
+      )}
+      <Stack.Screen name="+not-found" />
+    </Stack>
   );
 }
