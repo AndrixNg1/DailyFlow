@@ -10,7 +10,7 @@ export default function IndexScreen() {
     if (loading) return;
 
     if (user) {
-      router.replace('/(tabs)/');
+      router.replace('/(tabs)');
     } else {
       router.replace('/auth/login');
     }

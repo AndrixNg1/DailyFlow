@@ -7,15 +7,17 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
-import { LogOut, Trash2, Bell, Settings } from 'lucide-react-native';
+import { LogOut, Trash2, Bell, Settings, CreditCard as Edit } from 'lucide-react-native'
 import { useAuth } from '@/hooks/useAuth';
 import { useHabits } from '@/hooks/useHabits';
+import { useProfile } from '@/hooks/useProfile';
 import { cancelAllNotifications } from '@/lib/notifications';
 import { storage } from '@/lib/storage';
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const { habits } = useHabits(user?.id);
+  const { profile, getDisplayName, getInitials } = useProfile(user?.id);
 
   const handleSignOut = async () => {
     Alert.alert(
@@ -62,8 +64,8 @@ export default function ProfileScreen() {
   };
 
   const getMemberSince = () => {
-    if (!user?.created_at) return 'Inconnu';
-    return formatDate(user.created_at);
+    if (!profile?.created_at) return 'Inconnu';
+    return formatDate(profile.created_at);
   };
 
   return (
@@ -81,11 +83,12 @@ export default function ProfileScreen() {
           <View style={styles.userCard}>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>
-                {user?.email?.charAt(0).toUpperCase() || '?'}
+                {getInitials()}
               </Text>
             </View>
             <View style={styles.userInfo}>
-              <Text style={styles.userEmail}>{user?.email}</Text>
+              <Text style={styles.userName}>{getDisplayName()}</Text>
+              <Text style={styles.userEmail}>{profile?.email}</Text>
               <Text style={styles.memberSince}>
                 Membre depuis le {getMemberSince()}
               </Text>
@@ -224,10 +227,15 @@ const styles = StyleSheet.create({
   userInfo: {
     flex: 1,
   },
-  userEmail: {
+  userName: {
     fontSize: 18,
     fontWeight: '600',
     color: '#1f2937',
+    marginBottom: 2,
+  },
+  userEmail: {
+    fontSize: 14,
+    color: '#6b7280',
     marginBottom: 4,
   },
   memberSince: {

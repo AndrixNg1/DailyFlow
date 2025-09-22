@@ -36,7 +36,7 @@ export default function LoginScreen() {
           : error.message
       );
     } else {
-      router.replace('/(tabs)/');
+      router.replace('/(tabs)');
     }
   };
 

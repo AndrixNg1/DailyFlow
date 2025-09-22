@@ -24,11 +24,12 @@ export function useHabits(userId?: string) {
       }
 
       // Puis synchroniser avec Supabase
+      // Provide table generic so Supabase client returns correct typed rows
       const { data, error: fetchError } = await supabase
         .from('habits')
         .select('*')
         .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false }) as { data: Habit[] | null; error: any };
 
       if (fetchError) {
         throw fetchError;
@@ -60,11 +61,11 @@ export function useHabits(userId?: string) {
         user_id: userId,
       };
 
-      const { data, error: insertError } = await supabase
-        .from('habits')
-        .insert(newHabit)
+      // Use explicit generic for insert so types align with Database.Insert
+      const { data, error: insertError } = await (supabase.from('habits') as any)
+        .insert(newHabit as any)
         .select()
-        .single();
+        .single() as { data: Habit | null; error: any };
 
       if (insertError) {
         throw insertError;
@@ -73,7 +74,7 @@ export function useHabits(userId?: string) {
       if (data) {
         const updatedHabits = [data, ...habits];
         setHabits(updatedHabits);
-        await storage.setItem(`habits_${userId}`, JSON.stringify(updatedHabits));
+        if (userId) await storage.setItem(`habits_${userId}`, JSON.stringify(updatedHabits));
         
         // Programmer la notification
         await scheduleHabitNotification(
@@ -94,12 +95,11 @@ export function useHabits(userId?: string) {
 
   const updateHabit = async (habitId: string, updates: Partial<Habit>) => {
     try {
-      const { data, error: updateError } = await supabase
-        .from('habits')
-        .update(updates)
+      const { data, error: updateError } = await (supabase.from('habits') as any)
+        .update(updates as any)
         .eq('id', habitId)
         .select()
-        .single();
+        .single() as { data: Habit | null; error: any };
 
       if (updateError) {
         throw updateError;
@@ -107,8 +107,8 @@ export function useHabits(userId?: string) {
 
       if (data) {
         const updatedHabits = habits.map(h => h.id === habitId ? data : h);
-        setHabits(updatedHabits);
-        await storage.setItem(`habits_${userId}`, JSON.stringify(updatedHabits));
+  setHabits(updatedHabits);
+  if (userId) await storage.setItem(`habits_${userId}`, JSON.stringify(updatedHabits));
         
         // Reprogrammer la notification si l'heure a changé
         if (updates.reminder_time || updates.title || updates.emoji) {

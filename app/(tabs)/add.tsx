@@ -62,7 +62,7 @@ export default function AddHabitScreen() {
               setTitle('');
               setSelectedEmoji('⭐');
               setReminderTime('09:00');
-              router.push('/(tabs)/');
+              router.push('/(tabs)');
             }
           }
         ]
