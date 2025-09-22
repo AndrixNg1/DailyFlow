@@ -4,10 +4,12 @@ import { storage } from './storage';
 
 // Configuration des notifications
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
+  handleNotification: async (): Promise<Notifications.NotificationBehavior> => ({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
 
@@ -32,7 +34,7 @@ export const setupNotifications = async () => {
 
   const token = await Notifications.getExpoPushTokenAsync();
   console.log('Push token:', token);
-  
+
   await storage.setItem('pushToken', token.data);
   return token.data;
 };
@@ -43,16 +45,19 @@ export const scheduleHabitNotification = async (
   emoji: string,
   reminderTime: string
 ) => {
-  if (Platform.OS === 'web') {
-    console.log('Notifications not supported on web');
-    return;
-  }
+  if (Platform.OS === 'web') return;
 
   try {
-    // Annuler les notifications existantes pour cette habitude
     await cancelHabitNotification(habitId);
 
-    const [hours, minutes] = reminderTime.split(':').map(Number);
+    const [hour, minute] = reminderTime.split(':').map(Number);
+
+    const trigger: Notifications.CalendarTriggerInput = {
+      type: Notifications.SchedulableTriggerInputTypes.CALENDAR, // ✅ requis
+      hour,
+      minute,
+      repeats: true,
+    };
 
     await Notifications.scheduleNotificationAsync({
       content: {
@@ -60,11 +65,7 @@ export const scheduleHabitNotification = async (
         body: "C'est l'heure de pratiquer votre habitude !",
         data: { habitId },
       },
-      trigger: {
-        hour: hours,
-        minute: minutes,
-        repeats: true,
-      },
+      trigger,
       identifier: `habit_${habitId}`,
     });
 
@@ -75,9 +76,7 @@ export const scheduleHabitNotification = async (
 };
 
 export const cancelHabitNotification = async (habitId: string) => {
-  if (Platform.OS === 'web') {
-    return;
-  }
+  if (Platform.OS === 'web') return;
 
   try {
     await Notifications.cancelScheduledNotificationAsync(`habit_${habitId}`);
@@ -88,9 +87,7 @@ export const cancelHabitNotification = async (habitId: string) => {
 };
 
 export const cancelAllNotifications = async () => {
-  if (Platform.OS === 'web') {
-    return;
-  }
+  if (Platform.OS === 'web') return;
 
   try {
     await Notifications.cancelAllScheduledNotificationsAsync();

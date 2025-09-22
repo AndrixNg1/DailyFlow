@@ -81,10 +81,21 @@ npm run build:web
 
 ## 🗄 Structure de la base de données
 
+### Table `users` (profils utilisateurs)
+```sql
+id (uuid, PK, FK -> auth.users.id)
+email (text)
+full_name (text, nullable)
+avatar_url (text, nullable)
+timezone (text, default: 'Europe/Paris')
+created_at (timestamptz)
+updated_at (timestamptz)
+```
+
 ### Table `habits`
 ```sql
 id (uuid, PK)
-user_id (uuid, FK -> auth.users.id)
+user_id (uuid, FK -> users.id)
 title (text)
 emoji (text)
 reminder_time (time)
@@ -105,6 +116,7 @@ completed_at (timestamptz)
 - **Row Level Security (RLS)** activé sur toutes les tables
 - **Politiques de sécurité** : Chaque utilisateur ne voit que ses données
 - **Authentification** : Gérée par Supabase Auth
+- **Profils automatiques** : Création automatique du profil utilisateur lors de l'inscription
 - **Validation côté client et serveur**
 
 ## 📦 Architecture du projet
@@ -123,6 +135,7 @@ app/
 
 hooks/                     # Hooks personnalisés
 ├── useAuth.ts            # Gestion authentification
+├── useProfile.ts         # Gestion profil utilisateur
 ├── useHabits.ts          # Gestion habitudes
 └── useHabitLogs.ts       # Gestion logs
 
@@ -133,7 +146,8 @@ lib/                      # Utilitaires
 
 supabase/
 └── migrations/          # Scripts SQL
-    └── create_habits_schema.sql
+    ├── create_habits_schema.sql
+    └── add_users_table.sql
 ```
 
 ## 🌐 Fonctionnement Offline
@@ -196,4 +210,4 @@ Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
 
 ---
 
-**Développé avec ❤️ en utilisant Expo et Supabase**
+**Développé avec ❤️par Andrix Ng en utilisant Expo et Supabase**

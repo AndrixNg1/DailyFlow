@@ -1,10 +1,9 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
-import { storage } from '@/lib/storage';
-import { Database } from '@/types/database';
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
+import { storage } from "@/lib/storage";
+import { Database } from "@/types/database";
 
-type HabitLog = Database['public']['Tables']['habit_logs']['Row'];
-type HabitLogInsert = Database['public']['Tables']['habit_logs']['Insert'];
+type HabitLog = Database["public"]["Tables"]["habit_logs"]["Row"];
 
 export function useHabitLogs(userId?: string) {
   const [logs, setLogs] = useState<HabitLog[]>([]);
@@ -14,47 +13,38 @@ export function useHabitLogs(userId?: string) {
   const loadLogs = async () => {
     if (!userId) return;
 
-    try {
-      // Charger depuis le cache local d'abord
-      const cachedLogs = await storage.getItem(`logs_${userId}`);
-      if (cachedLogs) {
-        setLogs(JSON.parse(cachedLogs));
-      }
+    setLoading(true);
 
-      // Synchroniser avec Supabase - récupérer les logs des 30 derniers jours
+    try {
+      // Cache local
+      const cachedLogs = await storage.getItem(`logs_${userId}`);
+      if (cachedLogs) setLogs(JSON.parse(cachedLogs));
+
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
       const { data, error: fetchError } = await supabase
         .from('habit_logs')
-        .select(`
-          *,
-          habits!inner(user_id)
-        `)
-        .eq('habits.user_id', userId)
+        .select('*')
+        .eq('user_id', userId)
         .gte('date', thirtyDaysAgo.toISOString().split('T')[0])
-        .order('date', { ascending: false });
+        .order('date', { ascending: false }) as { data: HabitLog[] | null; error: any };
 
-      if (fetchError) {
-        throw fetchError;
-      }
+      if (fetchError) throw fetchError;
 
       if (data) {
-        const logsData = data.map(item => ({
-          id: item.id,
-          habit_id: item.habit_id,
-          date: item.date,
-          completed: item.completed,
-          completed_at: item.completed_at,
-        })) as HabitLog[];
-        
-        setLogs(logsData);
-        await storage.setItem(`logs_${userId}`, JSON.stringify(logsData));
+        // Filtrer seulement les vrais logs (évite SelectQueryError)
+        const validLogs = data.filter(
+          (log): log is HabitLog => !("error" in log)
+        );
+        setLogs(validLogs);
+        await storage.setItem(`logs_${userId}`, JSON.stringify(validLogs));
       }
+
       setError(null);
     } catch (err) {
-      console.error('Error loading habit logs:', err);
-      setError(err instanceof Error ? err.message : 'Error loading habit logs');
+      console.error(err);
+      setError(err instanceof Error ? err.message : "Error loading logs");
     } finally {
       setLoading(false);
     }
@@ -64,95 +54,76 @@ export function useHabitLogs(userId?: string) {
     loadLogs();
   }, [userId]);
 
-  const toggleHabitCompletion = async (habitId: string, date: string) => {
+  const toggleHabitCompletion = async (habitId: string, date: string): Promise<{ error: any | null }> => {
     try {
       const existingLog = logs.find(
-        log => log.habit_id === habitId && log.date === date
+        (log) => log.habit_id === habitId && log.date === date
       );
 
       if (existingLog) {
-        // Mettre à jour le log existant
         const newCompleted = !existingLog.completed;
         const completed_at = newCompleted ? new Date().toISOString() : null;
 
-        const { data, error: updateError } = await supabase
-          .from('habit_logs')
-          .update({ 
-            completed: newCompleted,
-            completed_at 
-          })
+        const { data, error: updateError } = await (supabase.from('habit_logs') as any)
+          .update({ completed: newCompleted, completed_at })
           .eq('id', existingLog.id)
           .select()
-          .single();
+          .single() as { data: HabitLog | null; error: any };
 
         if (updateError) throw updateError;
-
         if (data) {
-          const updatedLogs = logs.map(log =>
-            log.id === existingLog.id ? data : log
+          setLogs((prev) =>
+            prev.map((log) => (log.id === data.id ? data : log))
           );
-          setLogs(updatedLogs);
-          await storage.setItem(`logs_${userId}`, JSON.stringify(updatedLogs));
         }
       } else {
-        // Créer un nouveau log
-        const newLog: HabitLogInsert = {
+        const newLog = {
           habit_id: habitId,
           date,
           completed: true,
           completed_at: new Date().toISOString(),
         };
 
-        const { data, error: insertError } = await supabase
-          .from('habit_logs')
+        const { data, error: insertError } = await (supabase.from('habit_logs') as any)
           .insert(newLog)
           .select()
-          .single();
+          .single() as { data: HabitLog | null; error: any };
 
         if (insertError) throw insertError;
-
-        if (data) {
-          const updatedLogs = [data, ...logs];
-          setLogs(updatedLogs);
-          await storage.setItem(`logs_${userId}`, JSON.stringify(updatedLogs));
-        }
+        if (data) setLogs((prev) => [data, ...prev]);
       }
-
       return { error: null };
     } catch (err) {
-      const error = err instanceof Error ? err : new Error('Error toggling habit completion');
-      console.error('Error toggling habit completion:', error);
-      return { error };
+      console.error("Toggle habit completion error:", err);
+      return { error: err instanceof Error ? err : true };
     }
+    // fallback
+    return { error: null };
   };
 
-  const getHabitCompletion = (habitId: string, date: string): boolean => {
-    const log = logs.find(log => log.habit_id === habitId && log.date === date);
-    return log?.completed ?? false;
-  };
+  const getHabitCompletion = (habitId: string, date: string) =>
+    logs.find((l) => l.habit_id === habitId && l.date === date)?.completed ??
+    false;
 
-  const getHabitStreak = (habitId: string): number => {
+  const getHabitStreak = (habitId: string) => {
     const habitLogs = logs
-      .filter(log => log.habit_id === habitId && log.completed)
+      .filter((l) => l.habit_id === habitId && l.completed)
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-    if (habitLogs.length === 0) return 0;
+    if (!habitLogs.length) return 0;
 
     let streak = 0;
-    const today = new Date();
-    let currentDate = new Date(today);
+    let currentDate = new Date();
     currentDate.setHours(0, 0, 0, 0);
 
     for (const log of habitLogs) {
       const logDate = new Date(log.date);
       logDate.setHours(0, 0, 0, 0);
 
-      if (logDate.getTime() === currentDate.getTime()) {
+      if (+logDate === +currentDate) {
         streak++;
         currentDate.setDate(currentDate.getDate() - 1);
-      } else {
-        break;
-      }
+      } else break;
     }
 
     return streak;
@@ -162,12 +133,9 @@ export function useHabitLogs(userId?: string) {
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-    const weeklyLogs = logs.filter(log => {
-      const logDate = new Date(log.date);
-      return log.habit_id === habitId && 
-             log.completed && 
-             logDate >= oneWeekAgo;
-    });
+    const weeklyLogs = logs.filter(
+      (l) => l.habit_id === habitId && l.completed && new Date(l.date) >= oneWeekAgo
+    );
 
     return {
       completed: weeklyLogs.length,
