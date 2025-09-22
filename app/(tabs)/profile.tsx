@@ -1,0 +1,337 @@
+import React from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Alert,
+} from 'react-native';
+import { LogOut, Trash2, Bell, Settings } from 'lucide-react-native';
+import { useAuth } from '@/hooks/useAuth';
+import { useHabits } from '@/hooks/useHabits';
+import { cancelAllNotifications } from '@/lib/notifications';
+import { storage } from '@/lib/storage';
+
+export default function ProfileScreen() {
+  const { user, signOut } = useAuth();
+  const { habits } = useHabits(user?.id);
+
+  const handleSignOut = async () => {
+    Alert.alert(
+      'Déconnexion',
+      'Êtes-vous sûr de vouloir vous déconnecter ?',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Déconnecter',
+          style: 'destructive',
+          onPress: async () => {
+            await cancelAllNotifications();
+            await signOut();
+          },
+        },
+      ]
+    );
+  };
+
+  const handleClearCache = async () => {
+    Alert.alert(
+      'Vider le cache',
+      'Cette action supprimera les données mises en cache localement. Les données sur le serveur seront préservées.',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Vider',
+          style: 'destructive',
+          onPress: async () => {
+            await storage.clear();
+            Alert.alert('Succès', 'Le cache a été vidé');
+          },
+        },
+      ]
+    );
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('fr-FR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+  };
+
+  const getMemberSince = () => {
+    if (!user?.created_at) return 'Inconnu';
+    return formatDate(user.created_at);
+  };
+
+  return (
+    <ScrollView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Profil</Text>
+        <Text style={styles.subtitle}>
+          Gérez votre compte et vos préférences
+        </Text>
+      </View>
+
+      <View style={styles.content}>
+        {/* Informations utilisateur */}
+        <View style={styles.section}>
+          <View style={styles.userCard}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>
+                {user?.email?.charAt(0).toUpperCase() || '?'}
+              </Text>
+            </View>
+            <View style={styles.userInfo}>
+              <Text style={styles.userEmail}>{user?.email}</Text>
+              <Text style={styles.memberSince}>
+                Membre depuis le {getMemberSince()}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Statistiques */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Mes statistiques</Text>
+          <View style={styles.statsCard}>
+            <View style={styles.statRow}>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{habits.length}</Text>
+                <Text style={styles.statLabel}>
+                  Habitude{habits.length > 1 ? 's' : ''} créée{habits.length > 1 ? 's' : ''}
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* Actions */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Actions</Text>
+          
+          <TouchableOpacity style={styles.actionButton} onPress={handleClearCache}>
+            <View style={styles.actionButtonContent}>
+              <Trash2 size={20} color="#6b7280" strokeWidth={2} />
+              <View style={styles.actionButtonText}>
+                <Text style={styles.actionButtonTitle}>Vider le cache</Text>
+                <Text style={styles.actionButtonSubtitle}>
+                  Supprime les données mises en cache localement
+                </Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.actionButton, styles.signOutButton]} 
+            onPress={handleSignOut}
+          >
+            <View style={styles.actionButtonContent}>
+              <LogOut size={20} color="#ef4444" strokeWidth={2} />
+              <View style={styles.actionButtonText}>
+                <Text style={[styles.actionButtonTitle, styles.signOutText]}>
+                  Se déconnecter
+                </Text>
+                <Text style={styles.actionButtonSubtitle}>
+                  Vous devrez vous reconnecter
+                </Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        {/* Informations */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Informations</Text>
+          <View style={styles.infoCard}>
+            <Text style={styles.appName}>Habit Tracker</Text>
+            <Text style={styles.version}>Version 1.0.0</Text>
+            <Text style={styles.description}>
+              Une application simple et efficace pour suivre vos habitudes quotidiennes 
+              et améliorer votre bien-être.
+            </Text>
+          </View>
+        </View>
+      </View>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+  },
+  header: {
+    padding: 24,
+    paddingTop: 60,
+    backgroundColor: '#ffffff',
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#6b7280',
+  },
+  content: {
+    flex: 1,
+    padding: 24,
+  },
+  section: {
+    marginBottom: 32,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginBottom: 16,
+  },
+  userCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  avatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#3b82f6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  avatarText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  userInfo: {
+    flex: 1,
+  },
+  userEmail: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginBottom: 4,
+  },
+  memberSince: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  statsCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  statRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  statItem: {
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#3b82f6',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 14,
+    color: '#6b7280',
+    textAlign: 'center',
+  },
+  actionButton: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  signOutButton: {
+    marginTop: 8,
+  },
+  actionButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  actionButtonText: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  actionButtonTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#1f2937',
+    marginBottom: 2,
+  },
+  signOutText: {
+    color: '#ef4444',
+  },
+  actionButtonSubtitle: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  infoCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  appName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    marginBottom: 4,
+  },
+  version: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginBottom: 12,
+  },
+  description: {
+    fontSize: 14,
+    color: '#6b7280',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+});
